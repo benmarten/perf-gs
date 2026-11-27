@@ -5,6 +5,8 @@ from __future__ import annotations
 
 import math
 import os
+import queue
+import sys
 import threading
 import time
 from collections.abc import Callable, Sequence
@@ -456,6 +458,9 @@ class Viewer:
         self.gpu_lock = gpu_lock if gpu_lock is not None else contextlib.nullcontext()
         self.runtime = GpuRuntime(device, self.gpu_lock)
         self._thread: threading.Thread | None = None
+        self._main_thread_active = False
+        self._main_thread_id: int | None = None
+        self._main_thread_calls: queue.Queue = queue.Queue()
         self._stop_event = threading.Event()
 
         self._start_event = threading.Event()
@@ -683,8 +688,50 @@ class Viewer:
 
     def start(self):
         self._stop_event.clear()
+        if sys.platform == "darwin":
+            # AppKit requires windows and event processing on the process main thread.
+            self._main_thread_active = True
+            return
         self._thread = threading.Thread(target=self._run, daemon=True)
         self._thread.start()
+
+    def run_on_main_thread(self):
+        """Run the viewer loop on macOS, where its window must stay on the main thread."""
+        self._stop_event.clear()
+        self._main_thread_active = True
+        self._main_thread_id = threading.get_ident()
+        try:
+            self._run()
+        finally:
+            self._main_thread_active = False
+            self._main_thread_id = None
+
+    def call_on_main_thread(self, callback):
+        """Run a macOS UI operation on the viewer thread and return its result."""
+        if sys.platform != "darwin" or threading.get_ident() == self._main_thread_id:
+            return callback()
+        completed = threading.Event()
+        result: dict[str, object] = {}
+        self._main_thread_calls.put((callback, completed, result))
+        while not completed.wait(0.05):
+            if self._stop_event.is_set():
+                raise RuntimeError("viewer closed before the UI operation could run")
+        if "error" in result:
+            raise result["error"]
+        return result.get("value")
+
+    def _run_main_thread_calls(self) -> None:
+        while True:
+            try:
+                callback, completed, result = self._main_thread_calls.get_nowait()
+            except queue.Empty:
+                return
+            try:
+                result["value"] = callback()
+            except BaseException as error:
+                result["error"] = error
+            finally:
+                completed.set()
 
     def stop(self):
         self._stop_event.set()
@@ -920,6 +967,7 @@ class Viewer:
         last_time = time.perf_counter()
 
         while not window.should_close() and not self._stop_event.is_set():
+            self._run_main_thread_calls()
             window.process_events()
             if self._suspend.is_set():  # hub setup owns the GPU queue right now
                 time.sleep(0.02)
@@ -940,7 +988,10 @@ class Viewer:
                 self._last_error = None
             except Exception as e:
                 self._report_error("frame error", e)
-                time.sleep(0.016)
+                # A frame failure may leave the just-acquired surface image unpresented.
+                # Stop instead of retrying acquire_next_image and flooding the log.
+                self._stop_event.set()
+                break
 
             # Even a cached scene submits a UI pass and presents on the training GPU.
             # Wait outside both locks, and count time already spent drawing this frame.

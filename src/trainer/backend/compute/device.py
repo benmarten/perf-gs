@@ -5,8 +5,9 @@ packaged or source ``shaders/`` directory on the Slang include path."""
 
 from __future__ import annotations
 
-from pathlib import Path
 from importlib.resources import files
+import sys
+from pathlib import Path
 from typing import Literal
 
 import slangpy as spy
@@ -37,6 +38,9 @@ def create_device(
     """
     if backend not in _BACKEND_MAP:
         raise ValueError(f"unknown backend {backend!r}; expected one of {list(_BACKEND_MAP)}")
+
+    if sys.platform == "darwin":
+        defines = {**(defines or {}), "FIXED_POINT_INT32": "1"}
 
     if not shader_debug_info and not defines:
         return spy.create_device(

@@ -74,8 +74,8 @@ void scoreStructureAware(
     StructuredBuffer<CameraData> camera,
     Texture2D<float4> structure_tensor,
     StructuredBuffer<uint> tile_count_per_gaussian,
-    StructuredBuffer<int64_t> grad_2d_x_iter,
-    StructuredBuffer<int64_t> grad_2d_y_iter,
+    StructuredBuffer<fixed_t> grad_2d_x_iter,
+    StructuredBuffer<fixed_t> grad_2d_y_iter,
     RWStructuredBuffer<uint> eta_n_high, RWStructuredBuffer<uint> eta_n_low,
     RWStructuredBuffer<uint> eta_max_x, RWStructuredBuffer<uint> eta_max_y, RWStructuredBuffer<uint> eta_max_z,
     // Count of views in which this gaussian was on-screen / valid.

@@ -2,6 +2,7 @@
 
 #include "primitives/gaussian/blend.slang"
 #include "rasterize/tile_binned/blend_forward.slang"
+#include "common/fixed_point.slang"
 
 // Replay one pixel per 4x4 block up to the actual forward pass's early stop.
 [shader("compute")]
@@ -9,7 +10,7 @@
 void accumulateRemovalCost(uint3 tid : SV_DispatchThreadID,
     StructuredBuffer<CameraData> camera, StructuredBuffer<BlendData> blend_data,
     StructuredBuffer<uint> tile_start, StructuredBuffer<uint> sorted_ids,
-    RWTexture2D<uint> processed, RWTexture2D<float4> image, RWStructuredBuffer<int64_t> scores,
+    RWTexture2D<uint> processed, RWTexture2D<float4> image, RWStructuredBuffer<fixed_t> scores,
     uniform uint phase, uniform float hardness)
 {
     uint2 pixel = tid.xy * 4u + uint2(phase & 3u, phase >> 2u);
@@ -36,9 +37,13 @@ void accumulateRemovalCost(uint3 tid : SV_DispatchThreadID,
         // At the last entry there is no remaining background in this replay. This
         // form also stays finite when a hard, opaque splat drives t to zero.
         float3 delta = j + 1 == stop ? weight * source : (weight / t) * (source - remaining);
-        int64_t energy = int64_t(dot(delta, delta) * 1073741824.0);
+#ifdef FIXED_POINT_INT32
+        fixed_t energy = fixed_t(dot(delta, delta) * 16384.0);
+#else
+        fixed_t energy = fixed_t(dot(delta, delta) * 1073741824.0);
+#endif
         // One fixed-point unit distinguishes measured zero contrast from never sampled.
-        InterlockedAdd(scores[id], max(energy, int64_t(1)));
+        InterlockedAdd(scores[id], max(energy, fixed_t(1)));
         remaining -= weight * source;
         transmission *= t;
     }

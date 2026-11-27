@@ -8,6 +8,8 @@ from __future__ import annotations
 import argparse
 import json
 import time
+import sys
+import threading
 from dataclasses import dataclass, replace
 from datetime import datetime
 from pathlib import Path
@@ -1169,7 +1171,32 @@ def main() -> None:
         try:
             if app.args.hub:
                 from trainer.frontend.hub import TrainingHub
-                TrainingHub(app).run()
+                if sys.platform == "darwin":
+                    # AppKit requires the viewer window/event loop on the main thread;
+                    # keep dataset and training orchestration on a worker instead.
+                    failure: list[BaseException] = []
+
+                    def run_hub() -> None:
+                        try:
+                            TrainingHub(app).run()
+                        except BaseException as error:
+                            state = app.viewer.state if app.viewer is not None else None
+                            report_exception("Application failed", error, state)
+                            failure.append(error)
+
+                    worker = threading.Thread(target=run_hub, name="perf-gs-hub", daemon=True)
+                    worker.start()
+                    while worker.is_alive():
+                        viewer = app.viewer
+                        if viewer is not None and viewer.enabled:
+                            viewer.run_on_main_thread()
+                            break
+                        time.sleep(0.01)
+                    worker.join()
+                    if failure:
+                        raise SystemExit(1) from failure[0]
+                else:
+                    TrainingHub(app).run()
             else:
                 app.start_training()
         except Exception as error:

@@ -124,8 +124,8 @@ This runs Quality's 3,500 steps and continues with the model it just trained. Th
 
 ## Requirements
 
-- **OS and Python.** Python 3.10+. Tested on Windows 11. Linux and macOS are unverified.
-- **GPU.** Tested on the NVIDIA RTX 4050 Laptop GPU (6 GB), RTX 4080 (16 GB), RTX 4090 (24 GB) and AMD Radeon RX 7900 XT (20 GB). The rasterizer supports 32- and 64-lane waves and uses 64-bit integer buffer atomics through Vulkan (default) or Direct3D 12 (Windows).
+- **OS and Python.** Python 3.10+. Tested on Windows 11 and macOS on Apple M2. Linux remains unverified.
+- **GPU.** Tested on the NVIDIA RTX 4050 Laptop GPU (6 GB), RTX 4080 (16 GB), RTX 4090 (24 GB), AMD Radeon RX 7900 XT (20 GB), and Apple M2 through Vulkan/MoltenVK. The rasterizer supports 32- and 64-lane waves; Windows uses 64-bit integer buffer atomics, while MoltenVK uses 32-bit fixed-point accumulators.
 - **VRAM.** On Mip-NeRF 360, Balanced used 2.72-2.90 GiB at loop end on the RTX 4080 and 4090 and 2.76-2.95 GiB on the RX 7900 XT. Peak and viewer usage can be higher. [GPU memory measurements](docs/benchmarks.md)
 
 ## Quickstart
@@ -166,6 +166,22 @@ Perf-gs was designed to be extremely simple to setup and install.
   <a href="assets/train_hub.png"><img src="assets/train_hub.png" width="49%" alt="Train scene in the hub after 3,000 steps, with the Export PLY button visible"></a>
   <a href="assets/room_hub.png"><img src="assets/room_hub.png" width="49%" alt="Room scene in the hub before training, with the Balanced preset selected"></a>
 </p>
+
+### macOS (Apple Silicon)
+
+PERF-GS can run on Apple Silicon through Vulkan and MoltenVK. Install the Vulkan loader and MoltenVK with Homebrew, and install Apple’s Metal Toolchain (Xcode Command Line Tools alone may not include it):
+
+```sh
+brew install molten-vk vulkan-loader
+xcodebuild -downloadComponent MetalToolchain
+python3 -m venv .venv
+.venv/bin/python -m pip install -e ".[dev]"
+.venv/bin/python -m trainer.frontend.app --hub
+```
+
+Open a COLMAP scene in the hub and start training. On macOS, PERF-GS uses 32-bit fixed-point gradient accumulators at scale 4,096 because MoltenVK does not support the 64-bit atomics used by the default Vulkan path. This lowers accumulator precision and range. A full 3,000-step Balanced training run completed on an Apple M2; other Apple GPU generations and scenes have not been benchmarked. The screenshot below records that run.
+
+![PERF-GS completed a 3,000-step Balanced truck reconstruction on Apple M2](docs/images/macos-moltenvk-truck.png)
 
 ### Train from the command line
 

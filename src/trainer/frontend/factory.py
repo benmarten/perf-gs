@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import argparse
+import sys
 import threading
 from typing import Any
 
@@ -22,6 +23,8 @@ from trainer.frontend.scene import SceneContext
 def shader_defines(spec: ShaderSpecialization) -> dict[str, str] | None:
     """The Slang macros of a specialization; None keeps every shader default."""
     defines: dict[str, str] = {}
+    if sys.platform == "darwin":
+        defines["FIXED_POINT_INT32"] = "1"
     if spec.backward_pixel_stride != 1:
         defines["BACKWARD_PIXEL_STRIDE"] = f"{spec.backward_pixel_stride}u"
     if spec.hardness_is_one:

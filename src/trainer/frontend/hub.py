@@ -169,7 +169,7 @@ class TrainingHub:
             elif command in ("browse", "new_dataset"):
                 from slangpy import platform
                 try:
-                    folder = platform.choose_folder_dialog()
+                    folder = self.app.viewer.call_on_main_thread(platform.choose_folder_dialog)
                 except (AttributeError, OSError, RuntimeError):
                     state.notify("Folder picker unavailable. Drop a dataset folder onto the window.", WARN)
                 else:
@@ -343,7 +343,9 @@ class TrainingHub:
             state.notify("Nothing to export", WARN)
             return False
         try:
-            path = platform.save_file_dialog([platform.FileDialogFilter("Gaussian model", "*.ply")])
+            filters = [platform.FileDialogFilter("Gaussian model", "*.ply")]
+            path = self.app.viewer.call_on_main_thread(
+                lambda: platform.save_file_dialog(filters))
         except (AttributeError, OSError, RuntimeError):
             path = self.app.paths.root / "output.ply"
             if path.exists():

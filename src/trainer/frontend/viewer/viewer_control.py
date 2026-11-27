@@ -138,16 +138,29 @@ class ViewerSession:
             self._viewer.resume_rendering()
 
     def start(self) -> None:
-        """Start the background render thread (call once setup submits are done)."""
+        """Start the render loop (background thread except on macOS)."""
         if self._viewer is None:
             return
         self._viewer.start()
         print("[viewer] render thread started.", flush=True)
 
+    def run_on_main_thread(self) -> None:
+        """Run the macOS viewer loop on the process main thread."""
+        if self._viewer is not None:
+            self._viewer.run_on_main_thread()
+
+    def call_on_main_thread(self, callback):
+        """Run an OS UI operation on the viewer's main thread when required."""
+        if self._viewer is None:
+            return callback()
+        return self._viewer.call_on_main_thread(callback)
+
     def is_alive(self) -> bool:
         """Whether the render thread has been started and is still running."""
         if self._viewer is None:
             return False
+        if self._viewer._main_thread_active:
+            return True
         thread = self._viewer._thread
         return thread is not None and thread.is_alive()
 

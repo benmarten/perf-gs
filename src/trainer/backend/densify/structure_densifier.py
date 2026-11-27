@@ -6,6 +6,7 @@ per splat, and a densify tick splits splats whose views agree they under-resolve
 from __future__ import annotations
 
 import numpy as np
+import sys
 import slangpy as spy
 
 from trainer.backend.compute.algorithms import PrefixScan
@@ -30,7 +31,8 @@ _COMPACT = "densify/scatter_compact.slang"
 _SCORE = "densify/score_structure_aware.slang"
 _SPLIT = "densify/split_anisotropic.slang"
 _RANK = "densify/rank_families.slang"
-FIXED_POINT_SCALE = 65536.0
+FIXED_POINT_SCALE = 4096.0 if sys.platform == "darwin" else 65536.0
+FIXED_POINT_DTYPE = np.int32 if sys.platform == "darwin" else np.int64
 
 
 class StructureDensifier:
@@ -290,7 +292,7 @@ class StructureDensifier:
         eta_max = eta_max.astype(np.float64) / FIXED_POINT_SCALE
         visible = u32(self._densification_resources.visibility_count).astype(np.float64)
         grad = np.frombuffer(self._densification_resources.grad_mean_2d_mag.storage.to_numpy().tobytes(),
-                             dtype=np.int64)[:pre_count].astype(np.float64) / FIXED_POINT_SCALE
+                             dtype=FIXED_POINT_DTYPE)[:pre_count].astype(np.float64) / FIXED_POINT_SCALE
         seen = n_total > 0
         if not seen.any():
             return
