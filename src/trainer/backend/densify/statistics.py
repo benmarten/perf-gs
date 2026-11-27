@@ -7,7 +7,7 @@ from __future__ import annotations
 import numpy as np
 import slangpy as spy
 
-from trainer.backend.compute.fixed_point import FIXED_POINT_DTYPE, FIXED_POINT_SCALE
+from trainer.backend.compute.fixed_point import fixed_point_format
 from trainer.backend.compute.gpu import CommandRecorder
 from trainer.backend.compute.kernels import KernelLibrary
 from trainer.backend.memory.buffers import (
@@ -30,6 +30,7 @@ class DensifyStatistics:
                  capacity: int, width: int, height: int) -> None:
         self._commands = commands
         self._k = kernels.load(self.KERNELS)
+        self._fixed_point = fixed_point_format(kernels.session)
         self._primitive = primitive
         self.resources = resources
         self._gradients = gradients
@@ -65,9 +66,9 @@ class DensifyStatistics:
 
     def read(self) -> dict[str, np.ndarray]:
         r = self.resources
-        magnitude = np.frombuffer(r.grad_mean_2d_mag.to_numpy().tobytes(), dtype=FIXED_POINT_DTYPE)
+        magnitude = np.frombuffer(r.grad_mean_2d_mag.to_numpy().tobytes(), dtype=self._fixed_point.dtype)
         visible = np.frombuffer(r.visibility_count.to_numpy().tobytes(), dtype=np.uint32)
         return {
-            "grad_mean_2d_mag": magnitude.astype(np.float64) / FIXED_POINT_SCALE,
+            "grad_mean_2d_mag": magnitude.astype(np.float64) / self._fixed_point.scale,
             "visibility_count": visible.astype(np.int64),
         }

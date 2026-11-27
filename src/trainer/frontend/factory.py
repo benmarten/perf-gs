@@ -11,7 +11,6 @@ from typing import Any
 import slangpy as spy
 
 from trainer.backend.compute.device import create_device, create_slang_session
-from trainer.backend.compute.fixed_point import fixed_point_shader_defines
 from trainer.backend.render.pipeline import TrainingPipeline
 from trainer.backend.render.stbn_table import pixels_per_tile
 from trainer.config.config import ShaderSpecialization
@@ -23,7 +22,6 @@ from trainer.frontend.scene import SceneContext
 def shader_defines(spec: ShaderSpecialization) -> dict[str, str] | None:
     """The Slang macros of a specialization; None keeps every shader default."""
     defines: dict[str, str] = {}
-    defines.update(fixed_point_shader_defines())
     if spec.backward_pixel_stride != 1:
         defines["BACKWARD_PIXEL_STRIDE"] = f"{spec.backward_pixel_stride}u"
     if spec.hardness_is_one:
@@ -74,8 +72,7 @@ class SlangSessions:
 
     def __init__(self, device: spy.Device) -> None:
         self._device = device
-        own = device.slang_session.desc.compiler_options.defines
-        self._sessions = {frozenset(own.items()): device.slang_session}
+        self._sessions: dict[frozenset[tuple[str, str]], spy.SlangSession] = {}
 
     def session_for(self, spec: ShaderSpecialization) -> spy.SlangSession:
         defines = shader_defines(spec) or {}
