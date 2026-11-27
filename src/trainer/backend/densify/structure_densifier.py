@@ -6,13 +6,12 @@ per splat, and a densify tick splits splats whose views agree they under-resolve
 from __future__ import annotations
 
 import numpy as np
-import sys
 import slangpy as spy
 
 from trainer.backend.compute.algorithms import PrefixScan
+from trainer.backend.compute.fixed_point import FIXED_POINT_DTYPE, FIXED_POINT_SCALE
 from trainer.backend.compute.gpu import CommandRecorder
 from trainer.backend.compute.kernels import KernelLibrary
-from trainer.config.config import StructureConfig
 from trainer.backend.densify.opacity import OpacityReset
 from trainer.backend.memory.arena import ArenaCommitter
 from trainer.backend.memory.buffers import (
@@ -25,14 +24,13 @@ from trainer.backend.memory.buffers import (
     SphericalHarmonicsResources,
     StructureSplitResources,
 )
+from trainer.config.config import StructureConfig
 
 _DISPATCH = "densify/densify_dispatch.slang"
 _COMPACT = "densify/scatter_compact.slang"
 _SCORE = "densify/score_structure_aware.slang"
 _SPLIT = "densify/split_anisotropic.slang"
 _RANK = "densify/rank_families.slang"
-FIXED_POINT_SCALE = 4096.0 if sys.platform == "darwin" else 65536.0
-FIXED_POINT_DTYPE = np.int32 if sys.platform == "darwin" else np.int64
 
 
 class StructureDensifier:

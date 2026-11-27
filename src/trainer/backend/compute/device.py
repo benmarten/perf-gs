@@ -6,11 +6,12 @@ packaged or source ``shaders/`` directory on the Slang include path."""
 from __future__ import annotations
 
 from importlib.resources import files
-import sys
 from pathlib import Path
 from typing import Literal
 
 import slangpy as spy
+
+from trainer.backend.compute.fixed_point import fixed_point_shader_defines
 
 Backend = Literal["vulkan", "d3d12"]
 
@@ -39,8 +40,9 @@ def create_device(
     if backend not in _BACKEND_MAP:
         raise ValueError(f"unknown backend {backend!r}; expected one of {list(_BACKEND_MAP)}")
 
-    if sys.platform == "darwin":
-        defines = {**(defines or {}), "FIXED_POINT_INT32": "1"}
+    platform_defines = fixed_point_shader_defines()
+    if platform_defines:
+        defines = {**platform_defines, **(defines or {})}
 
     if not shader_debug_info and not defines:
         return spy.create_device(

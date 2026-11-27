@@ -5,7 +5,8 @@
 from __future__ import annotations
 
 import numpy as np
-import sys
+
+from trainer.backend.compute.fixed_point import FIXED_POINT_DTYPE
 
 
 def accumulate_removal_cost(pipeline, step: int, hardness: float) -> None:
@@ -23,8 +24,7 @@ def accumulate_removal_cost(pipeline, step: int, hardness: float) -> None:
 def prune_by_removal_cost(pipeline, fraction: float) -> dict[str, int]:
     count = pipeline.primitives.count()
     target = min(count, max(1, int(fraction * count)))
-    dtype = np.int32 if sys.platform == "darwin" else np.int64
-    scores = pipeline.buffers.densification.blend_weight.storage.to_numpy().view(dtype).reshape(-1)[:count]
+    scores = pipeline.buffers.densification.blend_weight.storage.to_numpy().view(FIXED_POINT_DTYPE).reshape(-1)[:count]
     # Zero denotes no measurement. A small or partially sampled scene can therefore
     # finish above its requested budget.
     observed = np.flatnonzero(scores > 0)

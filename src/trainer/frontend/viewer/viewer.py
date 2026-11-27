@@ -460,6 +460,7 @@ class Viewer:
         self._thread: threading.Thread | None = None
         self._main_thread_active = False
         self._main_thread_id: int | None = None
+        self._main_thread_ready = threading.Event()
         self._main_thread_calls: queue.Queue = queue.Queue()
         self._stop_event = threading.Event()
 
@@ -691,9 +692,15 @@ class Viewer:
         if sys.platform == "darwin":
             # AppKit requires windows and event processing on the process main thread.
             self._main_thread_active = True
+            self._main_thread_ready.set()
             return
         self._thread = threading.Thread(target=self._run, daemon=True)
         self._thread.start()
+
+    @property
+    def main_thread_ready(self) -> bool:
+        """Whether macOS setup has requested the main-thread event loop."""
+        return self._main_thread_ready.is_set()
 
     def run_on_main_thread(self):
         """Run the viewer loop on macOS, where its window must stay on the main thread."""
@@ -987,7 +994,7 @@ class Viewer:
                 render_frame()
                 self._last_error = None
             except Exception as e:
-                self._report_error("frame error", e)
+                self._report_error("frame failed; viewer stopped", e)
                 # A frame failure may leave the just-acquired surface image unpresented.
                 # Stop instead of retrying acquire_next_image and flooding the log.
                 self._stop_event.set()

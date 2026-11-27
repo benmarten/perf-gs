@@ -179,7 +179,7 @@ python3 -m venv .venv
 .venv/bin/python -m trainer.frontend.app --hub
 ```
 
-Open a COLMAP scene in the hub and start training. On macOS, PERF-GS uses 32-bit fixed-point gradient accumulators at scale 4,096 because MoltenVK does not support the 64-bit atomics used by the default Vulkan path. This lowers accumulator precision and range. A full 3,000-step Balanced training run completed on an Apple M2; other Apple GPU generations and scenes have not been benchmarked. The screenshot below records that run.
+Open a COLMAP scene in the hub and start training. On macOS, PERF-GS uses 32-bit fixed-point gradient accumulators at scale 4,096 because MoltenVK does not support the 64-bit atomics used by the default Vulkan path. This gives 1/4,096 gradient resolution and a signed accumulator range of about ±524,000; the scale completed a 3,000-step Balanced Truck run, but larger scenes have not been stress-tested for overflow. Removal-cost scores use a separate scale because they accumulate squared RGB error rather than linear gradients. Other Apple GPU generations and scenes have not been benchmarked. The screenshot below records the M2 run.
 
 ![PERF-GS completed a 3,000-step Balanced truck reconstruction on Apple M2](docs/images/macos-moltenvk-truck.png)
 

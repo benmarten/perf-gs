@@ -5,9 +5,9 @@
 from __future__ import annotations
 
 import numpy as np
-import sys
 import slangpy as spy
 
+from trainer.backend.compute.fixed_point import FIXED_POINT_DTYPE, FIXED_POINT_SCALE
 from trainer.backend.compute.gpu import CommandRecorder
 from trainer.backend.compute.kernels import KernelLibrary
 from trainer.backend.memory.buffers import (
@@ -15,10 +15,6 @@ from trainer.backend.memory.buffers import (
     GradientResources,
     PrimitiveStorage,
 )
-
-FIXED_POINT_SCALE = 4096.0 if sys.platform == "darwin" else 65536.0
-FIXED_POINT_DTYPE = np.int32 if sys.platform == "darwin" else np.int64
-
 
 class DensifyStatistics:
     """Screen-gradient magnitude, visibility count and blend weight per splat."""

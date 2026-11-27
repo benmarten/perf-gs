@@ -5,13 +5,13 @@
 from __future__ import annotations
 
 import argparse
-import sys
 import threading
 from typing import Any
 
 import slangpy as spy
 
 from trainer.backend.compute.device import create_device, create_slang_session
+from trainer.backend.compute.fixed_point import fixed_point_shader_defines
 from trainer.backend.render.pipeline import TrainingPipeline
 from trainer.backend.render.stbn_table import pixels_per_tile
 from trainer.config.config import ShaderSpecialization
@@ -23,8 +23,7 @@ from trainer.frontend.scene import SceneContext
 def shader_defines(spec: ShaderSpecialization) -> dict[str, str] | None:
     """The Slang macros of a specialization; None keeps every shader default."""
     defines: dict[str, str] = {}
-    if sys.platform == "darwin":
-        defines["FIXED_POINT_INT32"] = "1"
+    defines.update(fixed_point_shader_defines())
     if spec.backward_pixel_stride != 1:
         defines["BACKWARD_PIXEL_STRIDE"] = f"{spec.backward_pixel_stride}u"
     if spec.hardness_is_one:

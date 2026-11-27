@@ -37,11 +37,7 @@ void accumulateRemovalCost(uint3 tid : SV_DispatchThreadID,
         // At the last entry there is no remaining background in this replay. This
         // form also stays finite when a hard, opaque splat drives t to zero.
         float3 delta = j + 1 == stop ? weight * source : (weight / t) * (source - remaining);
-#ifdef FIXED_POINT_INT32
-        fixed_t energy = fixed_t(dot(delta, delta) * 16384.0);
-#else
-        fixed_t energy = fixed_t(dot(delta, delta) * 1073741824.0);
-#endif
+        fixed_t energy = fixed_t(dot(delta, delta) * REMOVAL_COST_SCALE);
         // One fixed-point unit distinguishes measured zero contrast from never sampled.
         InterlockedAdd(scores[id], max(energy, fixed_t(1)));
         remaining -= weight * source;

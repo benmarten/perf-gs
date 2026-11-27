@@ -7,9 +7,9 @@ from __future__ import annotations
 
 import argparse
 import json
-import time
 import sys
 import threading
+import time
 from dataclasses import dataclass, replace
 from datetime import datetime
 from pathlib import Path
@@ -1188,7 +1188,7 @@ def main() -> None:
                     worker.start()
                     while worker.is_alive():
                         viewer = app.viewer
-                        if viewer is not None and viewer.enabled:
+                        if viewer is not None and viewer.main_thread_ready:
                             viewer.run_on_main_thread()
                             break
                         time.sleep(0.01)

@@ -6,7 +6,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-import sys
 import numpy as np
 import slangpy as spy
 from slangpy.core.native import NativeNDBuffer, NativeNDBufferDesc, Shape
@@ -22,6 +21,7 @@ from trainer.backend.compute.execution import (
     TILE_HEIGHT,
     TILE_WIDTH,
 )
+from trainer.backend.compute.fixed_point import FIXED_POINT_BUFFER_DTYPE
 from trainer.backend.memory.layout import StructLayout
 
 # One fixed-point gradient accumulator per optimized scalar, in GaussianChannel order.
@@ -335,8 +335,7 @@ class _Alloc:
         return self.typed_buffer(label, "uint", *shape)
 
     def fixed_buffer(self, label: str, *shape) -> spy.NDBuffer:
-        # Mac shaders use fixed_t=int and 32-bit atomic additions.
-        return self.typed_buffer(label, "int" if sys.platform == "darwin" else "int64_t", *shape)
+        return self.typed_buffer(label, FIXED_POINT_BUFFER_DTYPE, *shape)
 
     def indirect_buffer(self, label: str, records: int = 1) -> spy.NDBuffer:
         return _make_labeled_ndbuffer(
@@ -682,7 +681,7 @@ class _AllocationCounter:
         return self.typed_buffer(label, "uint", *shape)
 
     def fixed_buffer(self, label, *shape):
-        return self.typed_buffer(label, "int" if sys.platform == "darwin" else "int64_t", *shape)
+        return self.typed_buffer(label, FIXED_POINT_BUFFER_DTYPE, *shape)
 
     def indirect_buffer(self, label, records=1):
         return self.uint_buffer(label, 3 * records)

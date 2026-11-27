@@ -39,6 +39,11 @@ class ViewerSession:
         """Whether a live viewer is attached (``False`` under ``--no-viewer``)."""
         return self._viewer is not None
 
+    @property
+    def main_thread_ready(self) -> bool:
+        """Whether macOS hub setup has started the viewer loop on the main thread."""
+        return self._viewer is not None and self._viewer.main_thread_ready
+
     @classmethod
     def create(
         cls,
