@@ -4,6 +4,36 @@
 #include "rasterize/tile_binned/blend_forward.slang"
 #include "common/fixed_point.slang"
 
+#ifdef FIXED_POINT_INT32
+static const int REMOVAL_COST_MAX = 2147483647;
+// Largest float32 strictly below 2^31 so float->int conversion never overflows.
+static const float REMOVAL_COST_MAX_FLOAT = 2147483520.0;
+
+// Saturate at INT32_MAX: pruning only ranks the lowest-scoring splats, so huge scores must never wrap.
+void addRemovalScore(RWStructuredBuffer<fixed_t> scores, uint id, float scaled_energy)
+{
+    int add = (scaled_energy >= REMOVAL_COST_MAX_FLOAT)
+        ? REMOVAL_COST_MAX
+        : (scaled_energy > 1.0 ? int(scaled_energy) : 1);
+    int cur = scores[id];
+    while (cur < REMOVAL_COST_MAX)
+    {
+        int next = (cur > REMOVAL_COST_MAX - add) ? REMOVAL_COST_MAX : cur + add;
+        int prev;
+        InterlockedCompareExchange(scores[id], cur, next, prev);
+        if (prev == cur) return;
+        cur = prev;
+    }
+}
+#else
+void addRemovalScore(RWStructuredBuffer<fixed_t> scores, uint id, float scaled_energy)
+{
+    fixed_t energy = fixed_t(scaled_energy);
+    // One fixed-point unit distinguishes measured zero contrast from never sampled.
+    InterlockedAdd(scores[id], max(energy, fixed_t(1)));
+}
+#endif
+
 // Replay one pixel per 4x4 block up to the actual forward pass's early stop.
 [shader("compute")]
 [numthreads(8, 8, 1)]
@@ -37,9 +67,7 @@ void accumulateRemovalCost(uint3 tid : SV_DispatchThreadID,
         // At the last entry there is no remaining background in this replay. This
         // form also stays finite when a hard, opaque splat drives t to zero.
         float3 delta = j + 1 == stop ? weight * source : (weight / t) * (source - remaining);
-        fixed_t energy = fixed_t(dot(delta, delta) * REMOVAL_COST_SCALE);
-        // One fixed-point unit distinguishes measured zero contrast from never sampled.
-        InterlockedAdd(scores[id], max(energy, fixed_t(1)));
+        addRemovalScore(scores, id, dot(delta, delta) * REMOVAL_COST_SCALE);
         remaining -= weight * source;
         transmission *= t;
     }

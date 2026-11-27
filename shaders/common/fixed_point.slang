@@ -21,6 +21,8 @@ static const float FIXED_SCALE = 65536.0;
 static const float REMOVAL_COST_SCALE = 1073741824.0;
 #endif
 static const float FIXED_INV_SCALE = 1.0 / FIXED_SCALE;
+// Per-axis structure scores (eta_max) use uint InterlockedMax on all backends, independent of fixed_t width.
+static const float ETA_FIXED_SCALE = 65536.0;
 
 fixed_t toFixed(float value) { return fixed_t(value * FIXED_SCALE); }
 float fromFixed(fixed_t value) { return float(value) * FIXED_INV_SCALE; }

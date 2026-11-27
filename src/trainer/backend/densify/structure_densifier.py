@@ -9,7 +9,7 @@ import numpy as np
 import slangpy as spy
 
 from trainer.backend.compute.algorithms import PrefixScan
-from trainer.backend.compute.fixed_point import FIXED_POINT_DTYPE, FIXED_POINT_SCALE
+from trainer.backend.compute.fixed_point import ETA_FIXED_SCALE, FIXED_POINT_DTYPE, FIXED_POINT_SCALE
 from trainer.backend.compute.gpu import CommandRecorder
 from trainer.backend.compute.kernels import KernelLibrary
 from trainer.backend.densify.opacity import OpacityReset
@@ -287,7 +287,7 @@ class StructureDensifier:
         n_total = u32(self.eta_resources.n_total).astype(np.float64)
         n_high = u32(eta["n_high"]).astype(np.float64)
         eta_max = np.maximum(u32(eta["max_x"]), np.maximum(u32(eta["max_y"]), u32(eta["max_z"])))
-        eta_max = eta_max.astype(np.float64) / FIXED_POINT_SCALE
+        eta_max = eta_max.astype(np.float64) / ETA_FIXED_SCALE
         visible = u32(self._densification_resources.visibility_count).astype(np.float64)
         grad = np.frombuffer(self._densification_resources.grad_mean_2d_mag.storage.to_numpy().tobytes(),
                              dtype=FIXED_POINT_DTYPE)[:pre_count].astype(np.float64) / FIXED_POINT_SCALE
