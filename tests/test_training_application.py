@@ -402,3 +402,24 @@ def test_stbn_variables_absent_when_the_feature_is_off() -> None:
     loop = object.__new__(TrainingLoop)
     loop.stbn_sampler = None
     assert loop._stbn_variables(0) is None
+
+
+def test_prepare_run_creates_viewer_only_when_absent() -> None:
+    for has_viewer in (False, True):
+        app = object.__new__(TrainingApplication)
+        app.viewer = object() if has_viewer else None
+        app.scene_context = SimpleNamespace(name="scene")
+        steps: list[str] = []
+        app._prepare_scene = lambda scene_dir, prepared=None, s=steps: s.append(f"scene:{scene_dir}:{prepared}")
+        app._create_pipeline_for_scene = lambda scene, s=steps: s.append("pipeline")
+        app._prepare_textures = lambda s=steps: s.append("textures")
+        app._create_viewer = lambda scene, s=steps: s.append("viewer")
+        app._start_profiler = lambda s=steps: s.append("profiler")
+        app._create_training_services = lambda s=steps: s.append("services")
+
+        app.prepare_run("my_scene", "cached")
+
+        expected = ["scene:my_scene:cached", "pipeline", "textures", "profiler", "services"]
+        if not has_viewer:
+            expected.insert(3, "viewer")
+        assert steps == expected
